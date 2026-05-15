@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulačka Dubai Import</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0a;
+    color: #e8e0d0;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+  }
+  header {
+    background: #c8860a;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 24px #c8860a55;
+  }
+  .sub { font-size: 11px; letter-spacing: 3px; color: #0a0a0a; opacity: 0.7; text-transform: uppercase; }
+  .title { font-size: 18px; font-weight: bold; color: #0a0a0a; }
+  .container { max-width: 520px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 16px; }
+  .card { border: 1px solid #333; border-radius: 4px; padding: 18px; background: #111; }
+  .card-label { font-size: 11px; letter-spacing: 3px; color: #c8860a; text-transform: uppercase; margin-bottom: 14px; }
+  label { font-size: 11px; color: #888; display: block; margin-bottom: 6px; }
+  input[type=number] {
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 2px;
+    color: #e8e0d0;
+    padding: 10px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    width: 100%;
+    outline: none;
+  }
+  input[type=number]:focus { border-color: #c8860a; }
+  .row2 { display: flex; gap: 12px; }
+  .row2 > div { flex: 1; }
+  .sub-val { font-size: 11px; color: #555; margin-top: 5px; }
+
+  /* Toggle */
+  .toggle-wrap {
+    display: flex;
+    border: 1px solid #333;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .toggle-btn {
+    flex: 1;
+    padding: 12px 8px;
+    background: #111;
+    color: #666;
+    border: none;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .toggle-btn.active {
+    background: #c8860a;
+    color: #0a0a0a;
+    font-weight: bold;
+  }
+
+  /* Breakdown */
+  .breakdown { border: 1px solid #c8860a44; border-radius: 4px; padding: 18px; background: #0d0d0a; }
+  .b-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 9px 0;
+    border-bottom: 1px solid #1a1a1a;
+    gap: 10px;
+  }
+  .b-label { font-size: 12px; color: #aaa; flex: 1; }
+  .b-label.accent { color: #c8860a; }
+  .b-val { text-align: right; min-width: 120px; }
+  .b-val .main { font-size: 13px; color: #e8e0d0; }
+  .b-val .main.accent { font-weight: bold; color: #c8860a; }
+  .b-val .czk { font-size: 11px; color: #555; }
+  .total {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: #c8860a;
+    border-radius: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .total-label { font-size: 11px; font-weight: bold; color: #0a0a0a; letter-spacing: 2px; text-transform: uppercase; }
+  .total-val { font-size: 22px; font-weight: bold; color: #0a0a0a; white-space: nowrap; }
+  .hint { text-align: center; color: #444; font-size: 12px; padding: 16px 0; }
+  .kurz-info { font-size: 11px; color: #555; margin-top: 8px; text-align: right; }
+  .note { font-size: 11px; color: #555; margin-top: 10px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:26px">🏎️</span>
+  <div>
+    <div class="sub">ZažijAmeriku</div>
+    <div class="title">Kalkulačka importu z Dubaje</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Varianta -->
+  <div class="card">
+    <div class="card-label">Varianta</div>
+    <div class="toggle-wrap">
+      <button class="toggle-btn active" id="btn-bezdph" onclick="setVarianta('bezdph')">Bez DPH</button>
+      <button class="toggle-btn" id="btn-sdph" onclick="setVarianta('sdph')">S DPH</button>
+    </div>
+    <div id="varianta-popis" class="note" style="margin-top:10px">
+      Clo: 10% z (cena auta + doprava DE)
+    </div>
+  </div>
+
+  <!-- Kurzy -->
+  <div class="card">
+    <div class="card-label">Směnné kurzy</div>
+    <div class="row2">
+      <div>
+        <label>1 AED = ? CZK</label>
+        <input type="number" id="aed" step="0.0001" value="5.7" oninput="pocitej()">
+      </div>
+      <div>
+        <label>1 PLN = ? CZK</label>
+        <input type="number" id="pln" step="0.0001" value="5.75" oninput="pocitej()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Cena auta -->
+  <div class="card">
+    <div class="card-label">Cena auta v Dubaji</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="number" id="cena" placeholder="napr. 150000" oninput="pocitej()" style="font-size:18px">
+      <span style="color:#888;font-size:14px;white-space:nowrap">AED</span>
+    </div>
+    <div class="sub-val" id="cena-czk"></div>
+  </div>
+
+  <!-- Výsledek -->
+  <div id="vysledek" style="display:none" class="breakdown">
+    <div class="card-label" style="margin-bottom:14px">Rozpis nákladů</div>
+
+    <div class="b-row">
+      <div class="b-label">Cena auta (Dubai)</div>
+      <div class="b-val"><div class="main" id="r-cena-aed"></div><div class="czk" id="r-cena-czk"></div></div>
+    </div>
+    <div class="b-row">
+      <div class="b-label">Doprava Dubai → DE</div>
+      <div class="b-val"><div class="main">12 500 AED</div><div class="czk" id="r-dop-de-czk"></div></div>
+    </div>
+    <div class="b-row" id="row-clo">
+      <div class="b-label accent" id="r-clo-label">Clo 10%</div>
+      <div class="b-val"><div class="main accent" id="r-clo-aed"></div><div class="czk" id="r-clo-czk"></div></div>
+    </div>
+    <div class="b-row" id="row-dph" style="display:none">
+      <div class="b-label accent" id="r-dph-label">DPH 21%</div>
+      <div class="b-val"><div class="main accent" id="r-dph-aed"></div><div class="czk" id="r-dph-czk"></div></div>
+    </div>
+    <div class="b-row">
+      <div class="b-label">Doprava DE → CZ</div>
+      <div class="b-val"><div class="main">2 000 PLN</div><div class="czk" id="r-dop-cz-czk"></div></div>
+    </div>
+    <div class="b-row" style="border:none">
+      <div class="b-label">Přihlášení + světla + opravy</div>
+      <div class="b-val"><div class="main">50 000 CZK</div></div>
+    </div>
+
+    <div class="total">
+      <div class="total-label">Celkem pod dům</div>
+      <div class="total-val" id="r-celkem"></div>
+    </div>
+
+    <div class="kurz-info" id="r-kurz-info"></div>
+  </div>
+
+  <div class="hint" id="hint">Zadej cenu auta pro výpočet</div>
+
+</div>
+
+<script>
+  var varianta = 'bezdph';
+
+  var DOPRAVA_DE = 12500;
+  var CLO_SAZBA = 0.10;
+  var DPH_SAZBA = 0.21;
+  var DPH_ZAKLAD_PODIL = 0.40; // 40% z ceny auta
+  var DOPRAVA_CZ_PLN = 2000;
+  var NAKLADY_CZ = 50000;
+
+  function setVarianta(v) {
+    varianta = v;
+    document.getElementById('btn-bezdph').className = 'toggle-btn' + (v === 'bezdph' ? ' active' : '');
+    document.getElementById('btn-sdph').className = 'toggle-btn' + (v === 'sdph' ? ' active' : '');
+    if (v === 'bezdph') {
+      document.getElementById('varianta-popis').textContent = 'Clo: 10% z (cena auta + doprava DE)';
+      document.getElementById('row-dph').style.display = 'none';
+    } else {
+      document.getElementById('varianta-popis').textContent = 'Clo + DPH se počítá ze 40% ceny auta: clo 10% + DPH 21%';
+      document.getElementById('row-dph').style.display = 'flex';
+    }
+    pocitej();
+  }
+
+  function fmt(n, d) {
+    d = d || 0;
+    return n.toLocaleString('cs-CZ', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  function pocitej() {
+    var cena = parseFloat(document.getElementById('cena').value) || 0;
+    var kurz1 = parseFloat(document.getElementById('aed').value) || 0;
+    var kurz2 = parseFloat(document.getElementById('pln').value) || 0;
+
+    if (cena > 0 && kurz1 > 0) {
+      document.getElementById('cena-czk').textContent = '≈ ' + fmt(cena * kurz1) + ' CZK';
+    } else {
+      document.getElementById('cena-czk').textContent = '';
+    }
+
+    if (cena > 0 && kurz1 > 0 && kurz2 > 0) {
+      var dopCzCzk = DOPRAVA_CZ_PLN * kurz2;
+      var celkem = 0;
+      var clo = 0;
+      var dph = 0;
+
+      if (varianta === 'bezdph') {
+        var zakladClo = cena + DOPRAVA_DE;
+        clo = zakladClo * CLO_SAZBA;
+        var celkemAed = cena + DOPRAVA_DE + clo;
+        celkem = celkemAed * kurz1 + dopCzCzk + NAKLADY_CZ;
+
+        document.getElementById('r-clo-label').textContent = 'Clo 10% (z ' + fmt(cena) + ' + ' + fmt(DOPRAVA_DE) + ' AED)';
+        document.getElementById('r-clo-aed').textContent = fmt(clo) + ' AED';
+        document.getElementById('r-clo-czk').textContent = fmt(clo * kurz1) + ' CZK';
+
+      } else {
+        // S DPH: clo a DPH ze 40% ceny auta
+        var zakladCloADph = cena * DPH_ZAKLAD_PODIL;
+        clo = zakladCloADph * CLO_SAZBA;
+        dph = zakladCloADph * DPH_SAZBA;
+        var celkemAed = cena + DOPRAVA_DE + clo + dph;
+        celkem = celkemAed * kurz1 + dopCzCzk + NAKLADY_CZ;
+
+        document.getElementById('r-clo-label').textContent = 'Clo 10% (ze 40% = ' + fmt(zakladCloADph) + ' AED)';
+        document.getElementById('r-clo-aed').textContent = fmt(clo) + ' AED';
+        document.getElementById('r-clo-czk').textContent = fmt(clo * kurz1) + ' CZK';
+
+        document.getElementById('r-dph-label').textContent = 'DPH 21% (ze 40% = ' + fmt(zakladCloADph) + ' AED)';
+        document.getElementById('r-dph-aed').textContent = fmt(dph) + ' AED';
+        document.getElementById('r-dph-czk').textContent = fmt(dph * kurz1) + ' CZK';
+      }
+
+      document.getElementById('r-cena-aed').textContent = fmt(cena) + ' AED';
+      document.getElementById('r-cena-czk').textContent = fmt(cena * kurz1) + ' CZK';
+      document.getElementById('r-dop-de-czk').textContent = fmt(DOPRAVA_DE * kurz1) + ' CZK';
+      document.getElementById('r-dop-cz-czk').textContent = fmt(dopCzCzk) + ' CZK';
+      document.getElementById('r-celkem').textContent = fmt(celkem) + ' Kč';
+      document.getElementById('r-kurz-info').textContent =
+        '1 AED = ' + kurz1 + ' CZK · 1 PLN = ' + kurz2 + ' CZK';
+
+      document.getElementById('vysledek').style.display = 'block';
+      document.getElementById('hint').style.display = 'none';
+    } else {
+      document.getElementById('vysledek').style.display = 'none';
+      document.getElementById('hint').style.display = 'block';
+    }
+  }
+
+  pocitej();
+</script>
+</body>
+</html>
